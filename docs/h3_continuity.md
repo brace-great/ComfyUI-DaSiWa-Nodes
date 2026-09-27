@@ -1,6 +1,28 @@
-# H3 Director Continuity 1.2.5
+# H3 Director Continuity
 
 The Director owns the controls. Selecting a video or checkpoint automatically shows **Continuity Active**. The actual model mode stays selected; there is no Continue pseudo-mode. The existing **Duration** input controls newly added seconds. The supplied wired workflow captures new takes by default; older capture-off workflows retain their preference.
+
+## Before you start
+
+| Needed | Why |
+| --- | --- |
+| Director + Director Guide, H3 model and CLIP | Build the new segment with the selected H3 mode |
+| Visual H3 VAE | Decode video; also encode an ordinary-video source |
+| Audio H3 VAE | Native AV continuity and ordinary-video imports, including silent sources |
+| Append & Stage after the sampler | Combine the pinned source latent with the new sample |
+| Publish Export after the actual video exporter | Offer a checkpoint only after a valid exported file exists |
+| PyAV (`av>=18.0`, included in pack requirements) | Probe and import local media; no external ffmpeg executable required |
+
+```mermaid
+flowchart LR
+    Q{"Start from?"} -->|"Completed H3 checkpoint"| C["Load existing AV latent"]
+    Q -->|"Ordinary video"| I["Probe + encode with H3 video/audio VAEs"]
+    C --> T["Condition on source tail"]
+    I --> T
+    T --> N["Sample new segment"]
+    N --> A["Append source + new AV latent"]
+    A --> E["Decode + export; publish checkpoint"]
+```
 
 ## Two sources, one continuation path
 
@@ -63,9 +85,22 @@ The hidden context is sampled but discarded before append; it is not added to th
 
 No tail tiles are displayed. Up to four chronological JPEGs are extracted only for an explicit vision Forge draft and cached separately from checkpoint metadata. They help infer end-of-source motion. Text-only fallback is labelled; no audio is analyzed. Upload/preparation and export do not generate JPEGs.
 
-Continuation skips first/last-frame anchors and, by default, REF2VA timeline references. **Keep REF2VA timeline references** opts those references into generation; normal reference state stays intact. Continuation Forge uses source-tail evidence and text, not an additional visual analysis of those optional timeline references.
+### Keep REF2VA timeline references
 
-Saved Director workflows use continuity v3. Its selected source, next-action text and Duration are retained as authored. The separate legacy v1/v2 API settings path is unchanged; it is not a saved-workflow migration.
+Open **Advanced** and check **Keep REF2VA timeline references** only when you want the references from the Director timeline to influence the new segment as well as the source tail. It is off by default: continuing normally skips REF2VA timeline media. Enabled image, video and audio references (and RefMods) then follow normal REF2VA processing and limits. Turning it off does not remove them from the saved timeline. First/last-frame anchors in non-REF modes are always skipped during continuation.
+
+```mermaid
+flowchart LR
+    S["Pinned source tail"] --> H["New segment conditioning"]
+    R["REF2VA timeline references"] --> K{"Keep references?"}
+    K -->|"Off: default"| X["Skip for this continuation"]
+    K -->|"On"| H
+    H --> O["New AV sample"]
+```
+
+This setting changes generation inputs, **not** Forge's visual evidence. Continuation Forge uses source-tail evidence and text; it does not additionally inspect the optional timeline images/videos. Review the continuation prompt and reference limits before queuing.
+
+The selected source, next-action text and Duration are retained when you save the Director workflow. Saving the workflow does not migrate older API settings.
 
 ## Integrity and resource costs
 

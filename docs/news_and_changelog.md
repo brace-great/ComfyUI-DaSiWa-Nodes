@@ -6,13 +6,13 @@ This changelog covers **2026-07-05 → 2026-09-27**. Older history lives in the 
 
 ## News
 
-- **H3 Continuity media and prompt fixes (09-27, 0.4.62):** Source probing, normalization and Forge tail images now use PyAV libraries without requiring external FFmpeg executables. Single-frame sources and trims retain a visible frame. Continuation prompts weld the overlap seam while allowing a requested change of pace, sound or camera afterward; Forge follows an existing next-action draft when no new idea is given. Director canvas dimensions are reapplied on restore and serialization, and saved v3 continuity text is preserved. Windows AMD telemetry uses ADLX with a CIM fallback. [Continuity guide →](h3_continuity.md)
+- **H3 Continuity media and prompt fixes (09-27, 0.4.62):** Source probing, normalization and Forge tail images now use PyAV libraries without requiring external FFmpeg executables. Single-frame sources and trims retain a visible frame. Continuation prompts weld the overlap seam while allowing a requested change of pace, sound or camera afterward; Forge follows an existing next-action draft when no new idea is given. Director canvas dimensions are reapplied on restore and serialization, and saved continuity text is preserved. Windows AMD telemetry uses ADLX with a CIM fallback. [Continuity guide →](h3_continuity.md)
 
 - **H3 Continuity Advanced overlay (0.4.61):** The rounded Advanced button now sits between Use latest output and Clear source. It opens a separate settings overlay instead of growing the Director node. The new ∞ Save new takes button before Choose start video controls checkpoint capture; choosing a source activates continuation separately. Capture, preferred context, references, session ID and source selection stay in saved workflow state; saved checkpoints remain available after ComfyUI restarts. Unsaved workflow changes still require saving.
 
 - **H3 Forge: vision GGUF and authenticated servers (09-26, 0.4.60):** Forge now supports vision-capable GGUF models (model + mmproj projector in the same folder) for continuity tail-image drafting, and OpenAI-compatible servers that require an API key via the new **H3 Forge → OpenAI-compatible API key** setting. Embedding models are excluded from the Ollama picker.
 
-- **H3 Continuity 1.1.0 (09-25, 0.4.59):** Integrated AV continuity with native tail conditioning and Forge drafting for continuation prompts. REF2VA audio-only validation resolved. Continuity nodes registered under the DaSiWa/MiniMax H3 category alongside the Director.
+- **H3 Continuity (09-25, 0.4.59):** Integrated AV continuity with native tail conditioning and Forge drafting for continuation prompts. REF2VA audio-only validation resolved. Continuity nodes registered under the DaSiWa/MiniMax H3 category alongside the Director.
 
 - **System Monitor: persistent NVML session (09-25, #54):** NVIDIA GPU polling now uses one persistent NVML session instead of spawning a new process per poll, reducing overhead and eliminating intermittent probe failures.
 
@@ -77,7 +77,7 @@ Quick reference for the version bumps inside this window, newest first:
 | 0.4.62 | 09-27 | H3 Continuity PyAV media path and single-frame fixes; seam-aware prompts, canvas/serialization fixes; Windows AMD ADLX telemetry |
 | 0.4.61 | 09-26 | H3 Continuity Advanced overlay; ∞ Save new takes button; workflow-persisted session state |
 | 0.4.60 | 09-26 | H3 Forge: vision GGUF support and authenticated OpenAI-compatible servers |
-| 0.4.59 | 09-25 | H3 Continuity 1.1.0: AV tail conditioning, Forge drafting for continuations, REF2VA audio-only validation fix |
+| 0.4.59 | 09-25 | H3 Continuity: AV tail conditioning, Forge drafting for continuations, REF2VA audio-only validation fix |
 | 0.4.58 | 09-25 | System Monitor: persistent NVML session (#54); H3 Forge Transformers GQA signature fix (#55) |
 | 0.4.57 | 09-24 | Forge saves three drafts per Director; Forge history and Director Clear controls |
 | 0.4.56 | 09-24 | H3 Prompt Forge and single free-text Director prompt with optional structure insertion and legacy migration |
@@ -127,13 +127,13 @@ Quick reference for the version bumps inside this window, newest first:
 
 ### MiniMax H3 Director (v1)
 
-- **09-27 (0.4.62):** **Continuity media and seam policy:** Uploaded-source probing, 24 fps normalization, and Forge tail extraction use PyAV rather than external FFmpeg commands. Single-frame source videos and trimmed one-frame ranges are retained. The automatic prompt matches motion, camera and sound at the overlap seam but permits an explicit next action after it; Forge keeps the current next-action draft when the new idea is empty. Director resolution is reapplied on restore and serialization; saved v3 continuity text remains unchanged by normalization. [Media migration and limits →](h3_pyav_migration.md)
+- **09-27 (0.4.62):** **Continuity media and seam policy:** Uploaded-source probing, 24 fps normalization, and Forge tail extraction use PyAV rather than external FFmpeg commands. Single-frame source videos and trimmed one-frame ranges are retained. The automatic prompt matches motion, camera and sound at the overlap seam but permits an explicit next action after it; Forge keeps the current next-action draft when the new idea is empty. Director resolution is reapplied on restore and serialization; saved continuity text remains unchanged by normalization. [Media migration and limits →](h3_pyav_migration.md)
 
 - **09-26 (0.4.61):** **H3 Continuity Advanced overlay:** The rounded Advanced button now sits between Use latest output and Clear source, opening a separate settings overlay instead of growing the Director node. New ∞ Save new takes button before Choose start video controls checkpoint capture independently from continuation activation. Capture state, preferred context, references, session ID, and source selection persist in saved workflow state; checkpoints remain available after ComfyUI restarts.
 
 - **09-26 (0.4.60):** **H3 Forge vision GGUF and authenticated servers:** Vision-capable GGUF models (model + mmproj projector in the same folder) are now detected and paired automatically for continuity tail-image drafting; Forge lists them as "sees pictures". OpenAI-compatible servers that require an API key are supported via the new **Settings → DaSiWa → H3 Forge → OpenAI-compatible API key** setting (sent as Bearer token to that address only). Embedding models are filtered out of the Ollama picker.
 
-- **09-25 (0.4.59):** **H3 Continuity 1.1.0:** Integrated AV continuity with native tail conditioning for both completed H3 checkpoints and ordinary uploaded videos. Forge drafting automatically receives continuity context (source-tail evidence, next action, added duration). REF2VA audio-only validation resolved. Continuity companion nodes (Append & Stage, Publish Export) registered under DaSiWa/MiniMax H3 category.
+- **09-25 (0.4.59):** **H3 Continuity:** Integrated AV continuity with native tail conditioning for both completed H3 checkpoints and ordinary uploaded videos. Forge drafting automatically receives continuity context (source-tail evidence, next action, added duration). REF2VA audio-only validation resolved. Continuity companion nodes (Append & Stage, Publish Export) registered under DaSiWa/MiniMax H3 category.
 
 - **09-25 (0.4.58):** **Transformers GQA helper signature fix (#55):** Fixed compatibility with newer Transformers versions that changed the GQA helper signature, restoring Forge operation on recent ComfyUI builds.
 
