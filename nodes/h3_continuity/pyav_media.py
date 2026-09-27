@@ -179,6 +179,8 @@ def write_video(path, info, width, height, destination, check):
     with open_media(path) as container, Path(destination).open("wb") as output:
         stream = video_stream(container, info["video_stream"])
         graph = None
+        first_frame = None
+        source_frames = 0
         def write_ready():
             nonlocal count
             for frame in drain(graph, check):
@@ -197,6 +199,8 @@ def write_video(path, info, width, height, destination, check):
                     count += 1
         for i, frame in enumerate(decoded(container, stream, check)):
             normalize_timestamp(frame, Fraction(container.start_time or 0, av.time_base), i, stream.guessed_rate or stream.average_rate)
+            source_frames += 1
+            first_frame = frame if source_frames == 1 else None
             if graph is None:
                 filters = rotation_filters(frame) + [("fps", "24"), ("scale", f"{width}:{height}:force_original_aspect_ratio=decrease"),
                     ("pad", f"{width}:{height}:(ow-iw)/2:(oh-ih)/2"), ("setsar", "1"), ("format", "rgb24")]
@@ -207,6 +211,26 @@ def write_video(path, info, width, height, destination, check):
             raise ValueError("The source video did not decode to complete RGB frames.")
         graph.push(None)
         write_ready()
+        if not count and source_frames == 1:
+            # A single still frame with no video packet duration can be dropped
+            # entirely by fps. Keep it upright and cover the container timeline
+            # (which may be longer because of an accompanying audio stream).
+            still = graph_for(first_frame, rotation_filters(first_frame) + [
+                ("scale", f"{width}:{height}:force_original_aspect_ratio=decrease"),
+                ("pad", f"{width}:{height}:(ow-iw)/2:(oh-ih)/2"),
+                ("setsar", "1"), ("format", "rgb24")])
+            still.push(first_frame)
+            still.push(None)
+            image = next(drain(still, check), None)
+            if image is not None:
+                copies = max(1, round(info["seconds"] * 24))
+                if copies > MAX_SECONDS * 24:
+                    raise ValueError(f"Decoded video exceeds the {MAX_SECONDS}-second media limit.")
+                data = image.to_ndarray(format="rgb24").tobytes()
+                for _ in range(copies):
+                    check()
+                    write_spool(output, data)
+                count = copies
     if not count:
         raise ValueError("The source video did not decode to complete RGB frames.")
     return count

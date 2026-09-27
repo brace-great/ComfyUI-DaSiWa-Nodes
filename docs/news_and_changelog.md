@@ -2,9 +2,11 @@
 
 Collection-wide news and change history for the DaSiWa Custom Nodes — one place to see what changed across every node. Per-node deep dives (UI guides, wiring, options) stay in their own docs, linked from the README.
 
-This changelog covers **2026-07-05 → 2026-09-26**. Older history lives in the git log. Entries within each section are listed **newest first**.
+This changelog covers **2026-07-05 → 2026-09-27**. Older history lives in the git log. Entries within each section are listed **newest first**.
 
 ## News
+
+- **H3 Continuity media and prompt fixes (09-27, 0.4.62):** Source probing, normalization and Forge tail images now use PyAV libraries without requiring external FFmpeg executables. Single-frame sources and trims retain a visible frame. Continuation prompts weld the overlap seam while allowing a requested change of pace, sound or camera afterward; Forge follows an existing next-action draft when no new idea is given. Director canvas dimensions are reapplied on restore and serialization, and saved v3 continuity text is preserved. Windows AMD telemetry uses ADLX with a CIM fallback. [Continuity guide →](h3_continuity.md)
 
 - **H3 Continuity Advanced overlay (0.4.61):** The rounded Advanced button now sits between Use latest output and Clear source. It opens a separate settings overlay instead of growing the Director node. The new ∞ Save new takes button before Choose start video controls checkpoint capture; choosing a source activates continuation separately. Capture, preferred context, references, session ID and source selection stay in saved workflow state; saved checkpoints remain available after ComfyUI restarts. Unsaved workflow changes still require saving.
 
@@ -72,6 +74,7 @@ Quick reference for the version bumps inside this window, newest first:
 
 | Version | Date | Headline |
 |---|---|---|
+| 0.4.62 | 09-27 | H3 Continuity PyAV media path and single-frame fixes; seam-aware prompts, canvas/serialization fixes; Windows AMD ADLX telemetry |
 | 0.4.61 | 09-26 | H3 Continuity Advanced overlay; ∞ Save new takes button; workflow-persisted session state |
 | 0.4.60 | 09-26 | H3 Forge: vision GGUF support and authenticated OpenAI-compatible servers |
 | 0.4.59 | 09-25 | H3 Continuity 1.1.0: AV tail conditioning, Forge drafting for continuations, REF2VA audio-only validation fix |
@@ -123,6 +126,8 @@ Quick reference for the version bumps inside this window, newest first:
 ## Changelog
 
 ### MiniMax H3 Director (v1)
+
+- **09-27 (0.4.62):** **Continuity media and seam policy:** Uploaded-source probing, 24 fps normalization, and Forge tail extraction use PyAV rather than external FFmpeg commands. Single-frame source videos and trimmed one-frame ranges are retained. The automatic prompt matches motion, camera and sound at the overlap seam but permits an explicit next action after it; Forge keeps the current next-action draft when the new idea is empty. Director resolution is reapplied on restore and serialization; saved v3 continuity text remains unchanged by normalization. [Media migration and limits →](h3_pyav_migration.md)
 
 - **09-26 (0.4.61):** **H3 Continuity Advanced overlay:** The rounded Advanced button now sits between Use latest output and Clear source, opening a separate settings overlay instead of growing the Director node. New ∞ Save new takes button before Choose start video controls checkpoint capture independently from continuation activation. Capture state, preferred context, references, session ID, and source selection persist in saved workflow state; checkpoints remain available after ComfyUI restarts.
 
@@ -220,6 +225,8 @@ Quick reference for the version bumps inside this window, newest first:
 - **07-30:** LLM cache and GGUF backends added (local GGUF via llama.cpp alongside Ollama and Hugging Face download).
 
 ### DaSiWa System Monitor
+
+- **09-27 (0.4.62):** Windows AMD GPUs use a persistent ADLX telemetry session for utilization, device-wide VRAM and temperature; CIM remains the device-enumeration fallback when ADLX is unavailable. The `amd-adlx` dependency is Windows-only. [GPU support →](system_monitor.md#gpu-support)
 
 - **09-25 (0.4.58):** NVIDIA GPU polling now uses one persistent NVML session instead of spawning a new process per poll, reducing overhead and eliminating intermittent probe failures (#54).
 
