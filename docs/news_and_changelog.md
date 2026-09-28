@@ -6,6 +6,8 @@ This changelog covers **2026-07-05 → 2026-09-28**. Older history lives in the 
 
 ## News
 
+- **System Monitor layout (09-28, 0.4.64, #59):** Lite defaults to its own top row instead of crowding ComfyUI controls; a horizontal-only resize handle wraps complete meters without cropping their values. The drag grip stays meter-height. The monitor reattaches after ComfyUI rebuilds its toolbar when the Properties panel toggles. The settings menu opens within the viewport, and background/content opacity controls are independently adjustable. The Free Memory button remains beside the top controls in every monitor placement. [Monitor guide →](system_monitor.md)
+
 - **H3 Forge subject-aware grouping (09-28, 0.4.63):** REF2VA picture rows can explicitly share a subject group; separate remains the default. Forge presents those pictures together to the prompt model and warns when distinct subject definitions cite members separately. Group choices persist with the Director workflow; no automatic inference from the Idea. [Director guide →](minimax_h3_director.md#prompt-forge-optional)
 
 - **H3 Continuity media and prompt fixes (09-27, 0.4.62):** Source probing, normalization and Forge tail images now use PyAV libraries without requiring external FFmpeg executables. Single-frame sources and trims retain a visible frame. Continuation prompts weld the overlap seam while allowing a requested change of pace, sound or camera afterward; Forge follows an existing next-action draft when no new idea is given. Director canvas dimensions are reapplied on restore and serialization, and saved continuity text is preserved. Windows AMD telemetry uses ADLX with a CIM fallback. [Continuity guide →](h3_continuity.md)
@@ -76,6 +78,7 @@ Quick reference for the version bumps inside this window, newest first:
 
 | Version | Date | Headline |
 |---|---|---|
+| 0.4.64 | 09-28 | System Monitor independent default row, remount on Properties toggle, horizontal wrapping resize, viewport-aware menu and opacity controls (#59) |
 | 0.4.63 | 09-28 | H3 Forge explicit subject-aware picture groups and split-definition warning |
 | 0.4.62 | 09-27 | H3 Continuity PyAV media path and single-frame fixes; seam-aware prompts, canvas/serialization fixes; Windows AMD ADLX telemetry |
 | 0.4.61 | 09-26 | H3 Continuity Advanced overlay; ∞ Save new takes button; workflow-persisted session state |
