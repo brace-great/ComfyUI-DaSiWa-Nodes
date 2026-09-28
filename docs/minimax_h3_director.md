@@ -89,6 +89,8 @@ For more prompt syntax, see MiniMax's [base prompt guide](https://huggingface.co
 
 Click **Prompt Forge**, enter an **Idea** (or **Next action** during continuity), choose a model, **Creativity** and **Detail** (1–10), then **Generate**. Review the draft and explicitly click **Apply to node**; generating alone does not change your prompt or queue a video. **Regenerate** makes another draft; Cancel/close stops an active request. The last three successful drafts are saved in this node's workflow properties, not reference packs. Choose one from history to preview it. A draft for another mode must be applied in that mode. **Clear history** leaves the applied prompt intact; Director **Clear** removes both.
 
+**Small model help** (tick it for models of about 4B–9B): in REF2VA, when the idea names several pictures as one character — "Rin, the character in picture 1, picture 3 and picture 4", "char 1 is pic 1, 2 and 3", "pictures 1-3" — Forge sends them to the model as one subject instead of one per picture. Without it, small models tend to write one subject per picture. Lists that read as several characters ("the girls in picture 1 and 2", "…fight each other") and lists that include a keyframe are left as they are. Large models do not need it.
+
 | Forge source | Setup | Notes |
 | --- | --- | --- |
 | Local ComfyUI model | Chat-model directory or GGUF under `models/llm/` | `local:`; GGUF needs `llama-cpp-python`. Vision GGUF also needs its matching `mmproj` in the same model folder. Bare `.safetensors` is not a chat model. |

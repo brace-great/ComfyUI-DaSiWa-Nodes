@@ -75,6 +75,8 @@ function installStyles() {
   .ds-forge .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .ds-forge .field{display:flex;flex-direction:column;gap:4px}
   .ds-forge input[type=range]{width:100%}
+  .ds-forge label.check{display:flex;align-items:center;gap:6px;cursor:pointer;width:max-content}
+  .ds-forge label.check .muted{font-weight:400}
   .ds-forge button{background:#202b35;color:#dbe7f0;border:1px solid #40515e;border-radius:4px;padding:6px 12px;cursor:pointer;font:inherit}
   .ds-forge button:hover{background:#2c3c49}
   .ds-forge button.primary{background:rgba(151,91,255,.3);border-color:rgba(177,128,255,.8);color:#fff;font-weight:600}
@@ -176,6 +178,13 @@ async function open(node) {
     el("div", { className: "field" }, el("label", { textContent: "Model" }), modelSel),
     el("div", { className: "field" }, el("label", { textContent: "Creativity" }), creativity)));
   box.append(el("div", { className: "field" }, el("label", {}, "Detail ", detailLabel), detail));
+  // Code does what a 4B-9B model gets wrong from the prompt alone. Today: pictures
+  // the idea lists as one subject ("Rin, in picture 1, 3 and 4") are sent as one.
+  const smallModel = el("input", { type: "checkbox", checked: !!prefs.small_model });
+  box.append(el("label", {
+    className: "check",
+    title: "Turn on for small models (about 4B to 9B). When your idea names several pictures as one character, e.g. \"Rin, the character in picture 1, 3 and 4\", Forge sends them as one subject instead of one per picture. Large models get this right without it.",
+  }, smallModel, "Small model help", el("span", { className: "muted", textContent: "for 4B–9B models" })));
 
   const status = el("span", { className: "status" });
   const setStatus = (msg, err = false) => { status.textContent = msg; status.classList.toggle("error", err); };
@@ -187,7 +196,7 @@ async function open(node) {
   const historyBox = el("div", { className: "history" });
   box.append(historyBox);
   const referenceControls = Array.from(box.querySelectorAll(".refs input, .refs select"));
-  const controls = [brief, modelSel, detail, creativity, ...referenceControls];
+  const controls = [brief, modelSel, detail, creativity, smallModel, ...referenceControls];
   controls.forEach(c => { c.disabled = true; });
   let result = null;
   const showResult = entry => {
@@ -197,6 +206,7 @@ async function open(node) {
       const { model, detail: level, creativity: preset } = entry.draftOptions;
       if (Array.from(modelSel.options).some(o => o.value === model)) modelSel.value = model;
       detail.value = level; creativity.value = preset;
+      if (entry.draftOptions.small_model !== undefined) smallModel.checked = !!entry.draftOptions.small_model;
       if (detail.oninput) detail.oninput();
     }
     result = entry;
@@ -279,6 +289,7 @@ async function open(node) {
   modelSel.addEventListener("change", clearDraft);
   creativity.addEventListener("change", clearDraft);
   detail.addEventListener("input", clearDraft);
+  smallModel.addEventListener("change", clearDraft);
   referenceControls.forEach(c => c.addEventListener(c.tagName === "SELECT" ? "change" : "input", clearDraft));
   genBtn.onclick = async () => {
     if (closed) return;
@@ -287,11 +298,11 @@ async function open(node) {
     if (openedKey !== hook.contextKey?.()) { setStatus("Director context changed. Close and reopen Forge.", true); return; }
     if (!text && !continuity) { setStatus("Write the idea first.", true); return; }
     if (!continuity) briefs.set(node.id, text);
-    remember({ model: modelSel.value, creativity: creativity.value, detail: Number(detail.value) });
+    remember({ model: modelSel.value, creativity: creativity.value, detail: Number(detail.value), small_model: smallModel.checked });
     result = null; output.hidden = true; output.textContent = ""; renderHistory();
     applyBtn.disabled = true;
     controls.forEach(c => { c.disabled = true; });
-    const draftOptions = { model: modelSel.value, detail: Number(detail.value), creativity: creativity.value };
+    const draftOptions = { model: modelSel.value, detail: Number(detail.value), creativity: creativity.value, small_model: smallModel.checked };
     const requestId = `forge-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     running = requestId; renderHistory();
     genBtn.textContent = "Cancel";
@@ -303,7 +314,7 @@ async function open(node) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           request_id: requestId, brief: text, mode, duration: hook.duration(), model: modelSel.value,
-          detail: Number(detail.value), creativity: creativity.value,
+          detail: Number(detail.value), creativity: creativity.value, small_model: smallModel.checked,
           references: refs.map(({ item, ...r }) => r), settings: forgeSettings(), continuity,
         }),
       });
