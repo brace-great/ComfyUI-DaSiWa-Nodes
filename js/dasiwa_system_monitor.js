@@ -634,19 +634,19 @@ async function mountMonitor() {
     applyOrientation(root);
     enablePanelDrag(root);
     enablePanelResize(root);
-    if (placePanel(root)) {
-        if (settings.placement === "floating") floatPanel(root, settings.x, settings.y);
-    } else {
-        document.body.appendChild(root);
-        monitorToolbarObserver = new MutationObserver(() => {
-            if (placePanel(root)) {
-                if (settings.placement === "floating") floatPanel(root, settings.x, settings.y);
-                monitorToolbarObserver?.disconnect();
-                monitorToolbarObserver = null;
-            }
-        });
-        monitorToolbarObserver.observe(document.body, { childList: true, subtree: true });
-    }
+    if (!placePanel(root)) document.body.appendChild(root);
+    // ComfyUI can replace the action-bar parent when its side panels toggle.
+    // Keep the same monitor element and its listeners; remount only its dock.
+    monitorToolbarObserver = new MutationObserver(() => {
+        if (settings.placement === "floating" || settings.dockSide !== "top") return;
+        const row = document.querySelector('[data-testid="top-menu-actionbars"]');
+        const dock = document.getElementById("dasiwa-monitor-dock-top");
+        if (row?.parentElement && (!root.isConnected || dock?.previousElementSibling !== row || dock.parentElement !== row.parentElement)) {
+            placePanel(root, "top");
+        }
+    });
+    monitorToolbarObserver.observe(document.body, { childList: true, subtree: true });
+    if (settings.placement === "floating") floatPanel(root, settings.x, settings.y);
     monitorEventListener = (event) => {
         latestSnapshot = event.detail;
         history = [...history, historyPoint(latestSnapshot)].slice(-HISTORY_LENGTH);
