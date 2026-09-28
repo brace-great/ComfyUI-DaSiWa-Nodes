@@ -6,6 +6,9 @@ const ROOT_ID = "dasiwa-system-monitor";
 const PANEL_ID = "dasiwa-system-monitor-panel";
 const SETTINGS_KEY = "dasiwa.system_monitor.settings";
 const MONITOR_ENABLED_SETTING = "DaSiWa.SystemMonitor.Enabled";
+const BACKGROUND_OPACITY_SETTING = "DaSiWa.SystemMonitor.BackgroundOpacity";
+const CONTENT_OPACITY_SETTING = "DaSiWa.SystemMonitor.ContentOpacity";
+const OPACITY_ATTRS = { min: 0, max: 100, step: 1 };
 const MONITOR_ENABLED_ENDPOINT = "/dasiwa/system-monitor/enabled";
 const HISTORY_LENGTH = 60;
 const DEFAULT_SETTINGS = {
@@ -282,6 +285,7 @@ function renderFull(panel, snapshot) {
             fullOverlay = document.createElement("div");
             fullOverlay.id = "dasiwa-monitor-full-overlay";
             document.body.appendChild(fullOverlay);
+            applyOpacity();
         }
         fullOverlay.hidden = false;
         const rect = root.getBoundingClientRect();
@@ -348,10 +352,54 @@ function fitPanel(panel) {
     }
 }
 
+function opacityValue(id) {
+    const saved = app.ui.settings.getSettingValue(id);
+    const value = Number(saved);
+    return saved != null && Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 100;
+}
+
+function applyOpacity() {
+    const background = `${opacityValue(BACKGROUND_OPACITY_SETTING)}%`;
+    const content = opacityValue(CONTENT_OPACITY_SETTING) / 100;
+    for (const element of [monitorRoot, fullOverlay]) {
+        if (!element) continue;
+        element.style.setProperty("--dasiwa-monitor-bg-opacity", background);
+        element.style.setProperty("--dasiwa-monitor-content-opacity", content);
+        element.style.setProperty("--dasiwa-monitor-content-alpha", `${Math.round(content * 100)}%`);
+    }
+    for (const [id, value] of [[BACKGROUND_OPACITY_SETTING, background], [CONTENT_OPACITY_SETTING, `${Math.round(content * 100)}%`]]) {
+        const input = document.querySelector(`#dasiwa-monitor-settings-menu input[data-opacity-setting="${id}"]`);
+        if (input) {
+            input.value = opacityValue(id);
+            input.nextElementSibling.textContent = value;
+        }
+    }
+}
+
+function positionMenu(button, menu) {
+    const rect = button.getBoundingClientRect();
+    const margin = 8;
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+    const below = window.innerHeight - rect.bottom - margin;
+    const above = rect.top - margin;
+    const preferredTop = below >= height || below >= above ? rect.bottom + 4 : rect.top - height - 4;
+    menu.style.left = `${Math.round(Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin)))}px`;
+    menu.style.top = `${Math.round(Math.max(margin, Math.min(preferredTop, window.innerHeight - height - margin)))}px`;
+}
+
 function closeMenu() {
     if (monitorMenuOutsideListener) document.removeEventListener("pointerdown", monitorMenuOutsideListener);
     monitorMenuOutsideListener = null;
+    window.removeEventListener("resize", repositionMenu);
+    window.removeEventListener("scroll", repositionMenu, true);
     document.getElementById("dasiwa-monitor-settings-menu")?.remove();
+}
+
+function repositionMenu() {
+    const button = monitorRoot?.querySelector(".dasiwa-monitor-settings");
+    const menu = document.getElementById("dasiwa-monitor-settings-menu");
+    if (button && menu) positionMenu(button, menu);
 }
 
 function isMonitorEnabled() {
@@ -419,12 +467,19 @@ function openMenu(button) {
         <label><input type="radio" name="dasiwa-monitor-dock" value="left" ${settings.dockSide === "left" ? "checked" : ""}> Left side</label>
         <label><input type="radio" name="dasiwa-monitor-dock" value="right" ${settings.dockSide === "right" ? "checked" : ""}> Right side</label>
         <div class="dasiwa-monitor-menu-note">Layout is automatic: horizontal at top; vertical at either side.</div>
+        <div class="dasiwa-monitor-menu-label">Transparency</div>
+        <label class="dasiwa-monitor-opacity-row">Background <span><input type="range" min="0" max="100" step="1" data-opacity-setting="${BACKGROUND_OPACITY_SETTING}" value="${opacityValue(BACKGROUND_OPACITY_SETTING)}" aria-label="Monitor background opacity"><output>${opacityValue(BACKGROUND_OPACITY_SETTING)}%</output></span></label>
+        <label class="dasiwa-monitor-opacity-row">Drawing / text / lines <span><input type="range" min="0" max="100" step="1" data-opacity-setting="${CONTENT_OPACITY_SETTING}" value="${opacityValue(CONTENT_OPACITY_SETTING)}" aria-label="Monitor content opacity"><output>${opacityValue(CONTENT_OPACITY_SETTING)}%</output></span></label>
         <div class="dasiwa-monitor-menu-label">Widgets</div>
         <div class="dasiwa-monitor-widgets-list">${widgetControls}</div>`;
     document.body.appendChild(menu);
-    const rect = button.getBoundingClientRect();
-    menu.style.left = `${Math.round(rect.left)}px`;
-    menu.style.top = `${Math.round(rect.bottom + 4)}px`;
+    positionMenu(button, menu);
+    window.addEventListener("resize", repositionMenu);
+    window.addEventListener("scroll", repositionMenu, true);
+    menu.querySelectorAll("[data-opacity-setting]").forEach((input) => input.addEventListener("input", () => {
+        input.nextElementSibling.textContent = `${input.value}%`;
+        void app.ui.settings.setSettingValue(input.dataset.opacitySetting, Number(input.value));
+    }));
     menu.querySelectorAll('input[name="dasiwa-monitor-mode"]').forEach((input) => input.addEventListener("change", (event) => {
         settings.mode = event.target.value;
         saveSettings();
@@ -437,6 +492,7 @@ function openMenu(button) {
         placePanel(root, settings.dockSide);
         saveSettings();
         render();
+        requestAnimationFrame(repositionMenu);
     }));
 
     menu.querySelectorAll('[data-widget-id]').forEach((input) => input.addEventListener("change", (event) => {
@@ -484,6 +540,13 @@ function addStyles() {
         #${ROOT_ID} .dasiwa-monitor-graph-wrap, #dasiwa-monitor-full-overlay .dasiwa-monitor-graph-wrap { position: relative; z-index: 1; height: 46px; margin-top: 7px; border-bottom: 1px solid color-mix(in srgb, var(--meter) 25%, transparent); }
         #${ROOT_ID} .dasiwa-monitor-graph, #dasiwa-monitor-full-overlay .dasiwa-monitor-graph { width: 100%; height: 100%; overflow: visible; fill: none; stroke: var(--meter); stroke-width: 3; vector-effect: non-scaling-stroke; }
         #${ROOT_ID} .dasiwa-monitor-empty-graph, #dasiwa-monitor-full-overlay .dasiwa-monitor-empty-graph { color: var(--descrip-text, #aaa); font-size: 10px; padding-top: 18px; text-align: center; }
+        #dasiwa-monitor-settings-menu { box-sizing: border-box; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto; color: var(--input-text); } #dasiwa-monitor-settings-menu label.dasiwa-monitor-opacity-row { display: grid; grid-template-columns: 1fr; gap: 4px; } #dasiwa-monitor-settings-menu .dasiwa-monitor-opacity-row > span { display: flex; align-items: center; gap: 8px; } #dasiwa-monitor-settings-menu .dasiwa-monitor-opacity-row input { flex: 1; min-width: 0; } #dasiwa-monitor-settings-menu .dasiwa-monitor-opacity-row output { min-width: 4ch; text-align: right; }
+        #${ROOT_ID} .dasiwa-monitor-drag-handle, #${ROOT_ID} .dasiwa-monitor-settings, #${ROOT_ID} .dasiwa-monitor-metric, #${ROOT_ID} .dasiwa-monitor-full-metric, #${PANEL_ID}.is-full, #dasiwa-monitor-full-overlay, #dasiwa-monitor-full-overlay .dasiwa-monitor-full-metric { background: color-mix(in srgb, var(--comfy-input-bg) var(--dasiwa-monitor-bg-opacity, 100%), transparent); }
+        #${PANEL_ID}.is-full, #dasiwa-monitor-full-overlay { background: color-mix(in srgb, var(--comfy-menu-bg, #202020) var(--dasiwa-monitor-bg-opacity, 100%), transparent); }
+        #${ROOT_ID} .dasiwa-monitor-drag-handle, #${ROOT_ID} .dasiwa-monitor-settings, #${ROOT_ID} .dasiwa-monitor-metric, #${ROOT_ID} .dasiwa-monitor-full-metric, #${PANEL_ID}.is-full, #dasiwa-monitor-full-overlay, #dasiwa-monitor-full-overlay .dasiwa-monitor-full-metric { border-color: color-mix(in srgb, var(--border-color) var(--dasiwa-monitor-content-alpha, 100%), transparent); }
+        #${ROOT_ID} .dasiwa-monitor-settings { color: color-mix(in srgb, var(--input-text) var(--dasiwa-monitor-content-alpha, 100%), transparent); }
+        #${ROOT_ID} .dasiwa-monitor-drag-handle::after, #${ROOT_ID} .dasiwa-monitor-metric > span, #${ROOT_ID} .dasiwa-monitor-metric > strong, #${ROOT_ID} .dasiwa-monitor-full-header, #${ROOT_ID} .dasiwa-monitor-full-metric > div, #${ROOT_ID} .dasiwa-monitor-full-metric > small, #dasiwa-monitor-full-overlay .dasiwa-monitor-full-header, #dasiwa-monitor-full-overlay .dasiwa-monitor-full-metric > div, #dasiwa-monitor-full-overlay .dasiwa-monitor-full-metric > small { opacity: var(--dasiwa-monitor-content-opacity, 1); }
+        #${ROOT_ID} .dasiwa-monitor-metric::before, #${ROOT_ID} .dasiwa-monitor-full-metric > i, #dasiwa-monitor-full-overlay .dasiwa-monitor-full-metric > i { opacity: calc(.38 * var(--dasiwa-monitor-content-opacity, 1)); }
         @media (max-width: 640px) { #${PANEL_ID}.is-full, #dasiwa-monitor-full-overlay { width: calc(100vw - 12px); padding: 9px; } #${ROOT_ID} .dasiwa-monitor-full-grid, #dasiwa-monitor-full-overlay .dasiwa-monitor-full-grid { grid-template-columns: 1fr; } }
     `;
     document.head.appendChild(style);
@@ -496,6 +559,7 @@ async function mountMonitor() {
     monitorRoot = root;
     root.id = ROOT_ID;
     root.innerHTML = `<span class="dasiwa-monitor-drag-handle" aria-label="Drag system monitor"></span><div id="${PANEL_ID}" class="dasiwa-monitor-display is-lite">Loading…</div><button class="dasiwa-monitor-settings" type="button" title="DaSiWa monitor settings" aria-label="DaSiWa monitor settings">⚙</button>`;
+    applyOpacity();
     const settingsButton = root.querySelector("button");
     settingsButton.addEventListener("click", () => openMenu(settingsButton));
     document.body.insertAdjacentHTML("beforeend", `
@@ -562,6 +626,16 @@ app.registerExtension({
             defaultValue: true,
             onChange: (enabled) => { void setMonitorEnabled(enabled !== false); },
         });
+        for (const [id, name, tooltip] of [
+            [BACKGROUND_OPACITY_SETTING, "Background opacity", "Opacity of the monitor's background surfaces (0% is transparent)."],
+            [CONTENT_OPACITY_SETTING, "Drawing / text / lines opacity", "Opacity of the monitor's meters, labels, graph lines and borders."],
+        ]) {
+            app.ui.settings.addSetting({
+                id, name, category: ["DaSiWa", "System Monitor", name], tooltip,
+                type: "slider", defaultValue: 100, attrs: OPACITY_ATTRS,
+                onChange: applyOpacity,
+            });
+        }
     },
     async setup() {
         const enabled = isMonitorEnabled();

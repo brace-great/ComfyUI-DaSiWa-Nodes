@@ -11,7 +11,8 @@ The current settings are stored in the browser, so they remain active after a Co
 - **Enable System Monitor:** the global DaSiWa switch. Off removes the monitor toolbar/floating UI, dock targets, frontend listeners, and backend telemetry polling. On starts and mounts them again.
 - **Lite:** the default compact fixed-width, color-coded toolbar meters. Each meter shows a label, a numeric value, and a proportional background fill representing 0–100% usage.
 - **Full:** a spacious monitor panel with every available metric, its current value and detail, plus a live graph covering the most recent 60 telemetry samples (normally about one minute).
-- **Dock:** choose the top toolbar, left side, or right side from the settings menu. The selection is retained after reload.
+- **Dock:** choose the top toolbar, left side, or right side from the settings menu. The selection is retained after reload. The menu opens toward available viewport space and scrolls if the window is too short.
+- **Transparency:** two 0–100% opacity sliders are available both in ComfyUI Settings and in the monitor's settings menu. Background controls the monitor surfaces; Drawing / text / lines controls meters, labels, graphs, and borders independently. 0% is invisible, 100% is opaque (the default). Both values persist after reload.
 - **Widget layout:** choose horizontal or vertical meter flow. This is especially useful in left/right side docks.
 - **Widgets:** enable or disable individual CPU, memory, disk, I/O, and GPU meters. Every widget is enabled by default and choices are retained after reload.
 - **Placement:** drag the monitor freely anywhere on the ComfyUI canvas. Floating placement uses pixel-aligned coordinates to keep its text sharp. Drop it on the visible top, left, or right target to dock it.
