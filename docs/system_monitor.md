@@ -10,7 +10,7 @@ The current settings are stored in the browser, so they remain active after a Co
 
 - **Enable System Monitor:** the global DaSiWa switch. Off removes the monitor toolbar/floating UI, dock targets, frontend listeners, and backend telemetry polling. On starts and mounts them again.
 - **Lite:** the default single-line, fixed-height bar with color-coded meters. Each meter shows a label, a numeric value, and a proportional background fill representing 0–100% usage. On narrow screens, scroll the bar horizontally to see the rest.
-- **Resize:** drag the small lower-right corner to change the monitor's width and height without scaling its meters or text. Resized bars wrap meters onto additional rows and scroll when their content exceeds the chosen height; size persists after reload. The dotted grip at the left stays vertically centered for dragging the bar.
+- **Resize:** drag the lower-right corner horizontally to change the monitor's width. Its height follows the number of meter rows automatically, and the dotted grip stays one meter tall. Narrowing the bar wraps whole meters to new rows; expanding stops when they all fit on one row. Size persists after reload.
 - **Reset to default Lite bar:** the monitor settings menu restores the single-line default dimensions and top dock without changing widget visibility or opacity.
 - **Full:** a spacious monitor panel with every available metric, its current value and detail, plus a live graph covering the most recent 60 telemetry samples (normally about one minute).
 - **Dock:** choose the top toolbar, left side, or right side from the settings menu. The selection is retained after reload. The menu opens toward available viewport space and scrolls if the window is too short.
@@ -21,7 +21,7 @@ The current settings are stored in the browser, so they remain active after a Co
 
 ## Free Memory toolbar button
 
-The DaSiWa-logo button sits beside the monitor when it is docked in the top toolbar. It remains in the toolbar if the monitor is floating, side-docked, or disabled. Click it to choose:
+The DaSiWa-logo button sits beside the other top controls, independent of the monitor's dock, size, or floating position. It stays in the toolbar even if the monitor is disabled. Click it to choose:
 
 - **Free VRAM:** asks ComfyUI to unload its managed models (`POST /free` with `unload_models: true`, `free_memory: false`).
 - **Free System RAM:** unloads managed models **and** resets ComfyUI's execution cache (`unload_models: true`, `free_memory: true`). This is not an operating-system-wide RAM purge.
@@ -34,7 +34,7 @@ The request is queued by ComfyUI and processed by its prompt worker; the button 
 
 Lite uses an independent bar below the main ComfyUI action toolbar, leaving Extensions, Run, and other actions in place. At the default size it keeps its meters on one line; at reduced viewport width, the bar scrolls horizontally instead of crowding the actions above it.
 
-Resize the bar from its lower-right corner to give the meters a narrower or taller space. The meters retain their own font and chip size and wrap into additional lines; use **Reset to default Lite bar** in its settings menu to restore the single-line top layout.
+Resize the bar horizontally from its lower-right corner. The meters retain their font and chip size, move to additional rows as width decreases, and determine the bar's height automatically. **Reset to default Lite bar** restores the single-line top layout.
 
 Use the small grip at the monitor's left edge to float it above the canvas. To dock it again, drag that grip to a visible top, left, or right dock target and release it there. The settings menu provides the same dock controls without dragging.
 
@@ -93,7 +93,7 @@ AMD telemetry on Windows goes through ADLX, the AMD driver's own telemetry libra
 
 ## Responsive Behavior
 
-At the default size the monitor remains one line, with horizontal scrolling when the viewport is narrower than its meters. Resizing the corner enables multi-line wrapping while keeping every meter at its original size; an overflowed fixed-height bar scrolls. The Full panel remains independently scrollable and collapses to one metric column on narrow screens.
+At the default size the monitor remains one line, with horizontal scrolling when the viewport is narrower than its meters. Resizing the corner wraps whole fixed-size meters into additional rows and grows the bar's height automatically, rather than clipping content. The Full panel remains independently scrollable and collapses to one metric column on narrow screens.
 
 ## Backend Requirements
 

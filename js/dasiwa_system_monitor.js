@@ -13,7 +13,7 @@ const MONITOR_ENABLED_ENDPOINT = "/dasiwa/system-monitor/enabled";
 const HISTORY_LENGTH = 60;
 const DEFAULT_SETTINGS = {
     mode: "lite", placement: "top", dockSide: "top", orientation: "horizontal",
-    widgets: {}, x: 24, y: 60, width: null, height: null,
+    widgets: {}, x: 24, y: 60, width: null,
 };
 
 let settings = loadSettings();
@@ -38,7 +38,6 @@ function loadSettings() {
             x: Number.isFinite(saved?.x) ? saved.x : DEFAULT_SETTINGS.x,
             y: Number.isFinite(saved?.y) ? saved.y : DEFAULT_SETTINGS.y,
             width: Number.isFinite(saved?.width) && saved.width >= 120 ? saved.width : null,
-            height: Number.isFinite(saved?.height) && saved.height >= 36 ? saved.height : null,
         };
     } catch {
         return { ...DEFAULT_SETTINGS };
@@ -62,9 +61,9 @@ function hideSideDocks() {
 }
 
 function applySize(root) {
-    root.classList.toggle("is-resized", settings.width !== null || settings.height !== null);
+    root.classList.toggle("is-resized", settings.width !== null);
     root.style.width = settings.width === null ? "" : `${Math.min(settings.width, window.innerWidth - 16)}px`;
-    root.style.height = settings.height === null ? "" : `${Math.min(settings.height, window.innerHeight - 16)}px`;
+    root.style.height = "";
 }
 
 function topDock() {
@@ -204,6 +203,20 @@ function enablePanelDrag(root) {
     });
 }
 
+function meterWidthLimits(root) {
+    const panel = root.querySelector(`#${PANEL_ID}`);
+    const widths = [...panel.children].map((metric) => metric.getBoundingClientRect().width);
+    const gap = parseFloat(getComputedStyle(panel).columnGap) || 0;
+    const chrome = root.querySelector(".dasiwa-monitor-drag-handle").offsetWidth
+        + root.querySelector(".dasiwa-monitor-settings").offsetWidth
+        + 15 // Corner grip keeps its own gutter, never covering the last meter.
+        + 2 * (parseFloat(getComputedStyle(root).columnGap) || 0);
+    return {
+        min: Math.max(120, chrome + Math.max(0, ...widths)),
+        max: Math.max(120, chrome + widths.reduce((total, width) => total + width, 0) + gap * Math.max(0, widths.length - 1)),
+    };
+}
+
 function enablePanelResize(root) {
     const handle = root.querySelector(".dasiwa-monitor-resize-handle");
     handle.addEventListener("pointerdown", (event) => {
@@ -211,13 +224,13 @@ function enablePanelResize(root) {
         event.preventDefault();
         event.stopPropagation();
         const startWidth = root.getBoundingClientRect().width;
-        const startHeight = root.getBoundingClientRect().height;
         const startX = event.clientX;
-        const startY = event.clientY;
         const move = (next) => {
             const rect = root.getBoundingClientRect();
-            settings.width = Math.max(120, Math.min(startWidth + next.clientX - startX, window.innerWidth - rect.left - 8));
-            settings.height = Math.max(36, Math.min(startHeight + next.clientY - startY, window.innerHeight - rect.top - 8));
+            const { min, max } = meterWidthLimits(root);
+            const containerRight = settings.placement === "floating" ? window.innerWidth : root.parentElement.getBoundingClientRect().right;
+            const available = Math.min(window.innerWidth, containerRight) - rect.left - 8;
+            settings.width = Math.max(min, Math.min(startWidth + next.clientX - startX, max, available));
             applySize(root);
             if (settings.placement === "floating") {
                 settings.x = Math.max(8, Math.min(settings.x, window.innerWidth - root.offsetWidth - 8));
@@ -510,7 +523,6 @@ function openMenu(button) {
     menu.querySelector(".dasiwa-monitor-reset").addEventListener("click", () => {
         settings.mode = "lite";
         settings.width = null;
-        settings.height = null;
         settings.placement = "top";
         applySize(root);
         placePanel(root, "top");
@@ -583,9 +595,10 @@ function addStyles() {
         #${ROOT_ID} .dasiwa-monitor-graph, #dasiwa-monitor-full-overlay .dasiwa-monitor-graph { width: 100%; height: 100%; overflow: visible; fill: none; stroke: var(--meter); stroke-width: 3; vector-effect: non-scaling-stroke; }
         #${ROOT_ID} .dasiwa-monitor-empty-graph, #dasiwa-monitor-full-overlay .dasiwa-monitor-empty-graph { color: var(--descrip-text, #aaa); font-size: 10px; padding-top: 18px; text-align: center; }
         #dasiwa-monitor-dock-top { box-sizing: border-box; display: flex; align-self: stretch; min-width: 0; max-width: 100%; padding: 4px 0; pointer-events: none; } #dasiwa-monitor-dock-top[hidden] { display: none; } #dasiwa-monitor-dock-top > #${ROOT_ID} { pointer-events: auto; }
-        #${ROOT_ID} { box-sizing: border-box; width: max-content; max-width: min(100%, calc(100vw - 16px)); min-height: 36px; align-items: stretch; } #${ROOT_ID}.is-floating { max-width: calc(100vw - 16px); } #${ROOT_ID}.is-dock-left, #${ROOT_ID}.is-dock-right { max-height: calc(100vh - 128px); }
-        #${ROOT_ID} .dasiwa-monitor-drag-handle { box-sizing: border-box; align-self: stretch; height: auto; display: flex; align-items: center; justify-content: center; flex: none; } #${ROOT_ID} .dasiwa-monitor-drag-handle::after { padding: 0; line-height: 1; }
-        #${PANEL_ID}.is-lite { box-sizing: border-box; flex: 1 1 auto; width: max-content; max-width: 100%; min-width: 0; min-height: 36px; flex-wrap: wrap; align-content: flex-start; overflow: auto; } #${ROOT_ID} .dasiwa-monitor-settings { flex: none; } #${ROOT_ID} .dasiwa-monitor-resize-handle { position: absolute; z-index: 1004; right: 0; bottom: 0; width: 15px; height: 15px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 55%, var(--border-color) 55% 62%, transparent 62% 74%, var(--border-color) 74% 81%, transparent 81%); }
+        #${ROOT_ID} { box-sizing: border-box; width: max-content; max-width: min(100%, calc(100vw - 16px)); min-height: 36px; align-items: flex-start; } #${ROOT_ID}.is-floating { max-width: calc(100vw - 16px); } #${ROOT_ID}.is-dock-left, #${ROOT_ID}.is-dock-right { max-height: calc(100vh - 128px); }
+        #${ROOT_ID} .dasiwa-monitor-drag-handle { box-sizing: border-box; align-self: flex-start; height: 36px; min-height: 36px; display: flex; align-items: center; justify-content: center; flex: none; } #${ROOT_ID} .dasiwa-monitor-drag-handle::after { padding: 0; line-height: 1; }
+        #${PANEL_ID}.is-lite { box-sizing: border-box; flex: 1 1 auto; width: max-content; max-width: 100%; min-width: 0; min-height: 36px; flex-wrap: wrap; align-content: flex-start; overflow: visible; } #${ROOT_ID} .dasiwa-monitor-settings { flex: none; } #${ROOT_ID} .dasiwa-monitor-resize-handle { position: absolute; z-index: 1004; right: 0; bottom: 0; width: 15px; height: 15px; cursor: ew-resize; touch-action: none; background: linear-gradient(135deg, transparent 55%, var(--border-color) 55% 62%, transparent 62% 74%, var(--border-color) 74% 81%, transparent 81%); }
+        #${ROOT_ID}.is-resized { padding-right: 15px; }
         #${ROOT_ID}:not(.is-resized) { height: 36px; } #${ROOT_ID}:not(.is-resized) #${PANEL_ID}.is-lite { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
         #${ROOT_ID}:not(.is-resized).is-vertical { height: auto; } #${ROOT_ID}:not(.is-resized).is-vertical #${PANEL_ID}.is-lite { overflow-x: hidden; overflow-y: auto; }
         #dasiwa-monitor-settings-menu .dasiwa-monitor-reset { padding: 5px; text-align: left; color: var(--input-text); border: 1px solid var(--border-color); background: var(--comfy-input-bg); cursor: pointer; }
