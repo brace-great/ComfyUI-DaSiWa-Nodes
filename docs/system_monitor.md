@@ -1,6 +1,6 @@
 # DaSiWa System Monitor
 
-A compact, non-intrusive system telemetry bar integrated directly into the ComfyUI top toolbar.
+A compact system telemetry bar integrated into ComfyUI, on its own row below the Extensions/Run toolbar so it does not push Run or the Free Memory button aside.
 
 ## Overview
 
@@ -9,7 +9,9 @@ The System Monitor displays real-time resource utilization in the ComfyUI header
 The current settings are stored in the browser, so they remain active after a ComfyUI page reload:
 
 - **Enable System Monitor:** the global DaSiWa switch. Off removes the monitor toolbar/floating UI, dock targets, frontend listeners, and backend telemetry polling. On starts and mounts them again.
-- **Lite:** the default compact fixed-width, color-coded toolbar meters. Each meter shows a label, a numeric value, and a proportional background fill representing 0–100% usage.
+- **Lite:** the default single-line, fixed-height bar with color-coded meters. Each meter shows a label, a numeric value, and a proportional background fill representing 0–100% usage. On narrow screens, scroll the bar horizontally to see the rest.
+- **Resize:** drag the small lower-right corner to change the monitor's width and height without scaling its meters or text. Resized bars wrap meters onto additional rows and scroll when their content exceeds the chosen height; size persists after reload. The dotted grip at the left stays vertically centered for dragging the bar.
+- **Reset to default Lite bar:** the monitor settings menu restores the single-line default dimensions and top dock without changing widget visibility or opacity.
 - **Full:** a spacious monitor panel with every available metric, its current value and detail, plus a live graph covering the most recent 60 telemetry samples (normally about one minute).
 - **Dock:** choose the top toolbar, left side, or right side from the settings menu. The selection is retained after reload. The menu opens toward available viewport space and scrolls if the window is too short.
 - **Transparency:** two 0–100% opacity sliders are available both in ComfyUI Settings and in the monitor's settings menu. Background controls the monitor surfaces; Drawing / text / lines controls meters, labels, graphs, and borders independently. 0% is invisible, 100% is opaque (the default). Both values persist after reload.
@@ -30,7 +32,9 @@ The request is queued by ComfyUI and processed by its prompt worker; the button 
 
 ### Lite (default)
 
-Lite keeps the monitor in the toolbar as compact, content-sized meters. Each chip sizes to its label and value (`max-content`) so text never clips at any resolution, font, or DPI. It is intended for continuous at-a-glance monitoring while working in ComfyUI.
+Lite uses an independent bar below the main ComfyUI action toolbar, leaving Extensions, Run, and other actions in place. At the default size it keeps its meters on one line; at reduced viewport width, the bar scrolls horizontally instead of crowding the actions above it.
+
+Resize the bar from its lower-right corner to give the meters a narrower or taller space. The meters retain their own font and chip size and wrap into additional lines; use **Reset to default Lite bar** in its settings menu to restore the single-line top layout.
 
 Use the small grip at the monitor's left edge to float it above the canvas. To dock it again, drag that grip to a visible top, left, or right dock target and release it there. The settings menu provides the same dock controls without dragging.
 
@@ -89,15 +93,7 @@ AMD telemetry on Windows goes through ADLX, the AMD driver's own telemetry libra
 
 ## Responsive Behavior
 
-When toolbar width is insufficient to display all metrics, lower-priority chips are hidden first. The priority order (highest to lowest):
-
-1. CPU
-2. RAM
-3. GPU metrics (Util, VRAM, Temp per GPU)
-4. SWAP
-5. DISK
-
-A ResizeObserver monitors window changes and adjusts visibility dynamically without user interaction. Full mode uses a scrollable panel and collapses to one metric column on narrow screens.
+At the default size the monitor remains one line, with horizontal scrolling when the viewport is narrower than its meters. Resizing the corner enables multi-line wrapping while keeping every meter at its original size; an overflowed fixed-height bar scrolls. The Full panel remains independently scrollable and collapses to one metric column on narrow screens.
 
 ## Backend Requirements
 
