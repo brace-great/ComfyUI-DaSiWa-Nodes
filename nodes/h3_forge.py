@@ -99,79 +99,29 @@ def _format_duration(seconds):
     return f"{mins}m {round(s - mins * 60)}s"
 
 
-# ── Several pictures, one subject ("Small model help") ───────────────────
-#
-# A subject picture's line says "define a <Subject N> from it", and a small
-# model follows that over the brief: "Rin, the character in picture 1,
-# picture 3, and picture 4" came back as three subjects on Qwen3-VL-8B.
-# With Small model help on, the pictures the brief lists together share one
-# line. Measured on a user's sentence, 5 runs each, Rin = Pictures 1, 3, 4 in
-# one <Subject N>:  qwen3.5:9b 0/5 -> 5/5,  a 4B 1/5 -> 5/5.
-# Port of pictureGroups in PromptForge's server/references.mjs.
-
-_PIC_WORD = r"<?\s*(?:pictures?|pics?|images?|imgs?)\s*#?\s*"
-_PIC_NUM = r"\d+(?:\s*(?:-|–|to)\s*\d+)?\s*>?"
-_PIC_SEP = r"\s*(?:,\s*and|,|&|\+|/|\band\b)\s*"
-_PIC_LIST = re.compile(f"{_PIC_WORD}{_PIC_NUM}(?:{_PIC_SEP}(?:{_PIC_WORD})?{_PIC_NUM})*", re.I)
-# The list is several subjects, not one: "the girls in picture 1 and 2",
-# "picture 1 and picture 2 fight each other". Same clause only.
-_MANY_BEFORE = re.compile(r"\b(?:characters|subjects|people|persons|girls|boys|women|men|kids|children|friends|twins|couple|pair|duo|trio|both|two|three|four|five|they|them|their|each|all|everyone)\b", re.I)
-_MANY_AFTER = re.compile(r"^[^.!?;\n]*?\b(?:each other|one another|together|versus|vs\.?|both)\b", re.I)
+# Group identity is an explicit Forge reference choice, never inferred from the brief.
 _COUNT_WORD = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
 
 
-def _list_numbers(text):
-    out = []
-    for m in re.finditer(r"(\d+)(?:\s*(?:-|–|to)\s*(\d+))?", text):
-        a = int(m.group(1))
-        b = int(m.group(2)) if m.group(2) else a
-        if b < a or b - a > 12:
-            return []
-        out += [n for n in range(a, b + 1) if n not in out]
-    return out
-
-
 def _images(references):
-    return [r for r in references if r.get("kind", "image") == "image"]
+    return [r for r in references if r.get("kind") == "image"]
 
 
-def picture_groups(brief, references):
-    """The picture lists the brief names as one subject: [{"pictures": [1, 3, 4], "role": "subject"}].
-
-    Numbers are the Nth image, as the lines number them. A list is dropped
-    whole when a number has no picture, the roles are not all subject (or all
-    style), the clause reads plural, or it overlaps an earlier list.
-    """
-    text = str(brief or "")
-    pictures = _images(references)
-    taken, groups = set(), []
-    for m in _PIC_LIST.finditer(text):
-        nums = sorted(_list_numbers(m.group(0)))
-        if len(nums) < 2:
-            continue
-        clause_start = max(text.rfind(c, 0, m.start()) for c in ".!?;\n") + 1
-        if _MANY_BEFORE.search(text[clause_start:m.start()]) or _MANY_AFTER.search(text[m.end():]):
-            continue
-        if any(n < 1 or n > len(pictures) for n in nums):
-            continue
-        roles = {pictures[n - 1].get("role") or "subject" for n in nums}
-        if len(roles) != 1 or not roles <= {"subject", "style"}:
-            continue
-        if any(n in taken for n in nums):
-            continue
-        taken.update(nums)
-        groups.append({"pictures": nums, "role": roles.pop()})
-    return groups
+def picture_groups(references):
+    """Only groups of two or more subject pictures share a reference line."""
+    by_id = {}
+    for n, ref in enumerate(_images(references), 1):
+        group = ref.get("subject_group")
+        if ref.get("role") == "subject" and isinstance(group, str) and group:
+            by_id.setdefault(group, []).append(n)
+    return [{"pictures": nums} for nums in by_id.values() if len(nums) >= 2]
 
 
 def _group_line(group, references):
     tags = [f"<Picture {n}>" for n in group["pictures"]]
     count = _COUNT_WORD[len(tags)] if len(tags) < len(_COUNT_WORD) else str(len(tags))
     every = "both" if len(tags) == 2 else f"all {count}"
-    if group["role"] == "style":
-        note = f"style — ONE style shown in {count} pictures, rendering only, not their content: define a single style <Subject N> citing {every}; no standalone picture lines"
-    else:
-        note = f"subject — ONE subject shown in {count} pictures: define a single <Subject N> citing {every}; no standalone picture lines"
+    note = f"subject — ONE subject shown in {count} pictures: define a single <Subject N> citing {every}; no standalone picture lines"
     bits = [", ".join(tags), note]
     pictures = _images(references)
     for n in group["pictures"]:
@@ -183,14 +133,14 @@ def _group_line(group, references):
     return "- " + " · ".join(bits)
 
 
-def format_references(references, mode, brief="", small_model=False):
+def format_references(references, mode):
     """Director label lines for each reference, and the labels of the pictures."""
     counters = {"Picture": 0, "Video": 0, "Audio": 0}
     lines, pictures = [], []
     base_mode = mode in BASE_MODES
     grouped = {}
-    if small_model and not base_mode:
-        for group in picture_groups(brief, references):
+    if mode == "REF2VA":
+        for group in picture_groups(references):
             for n in group["pictures"]:
                 grouped[n] = group
     for ref in references:
@@ -265,7 +215,7 @@ def scale_detail_rule(rule, duration):
     return out.replace(", the reference guide's own range", f" for this {float(duration):g}-second clip")
 
 
-def build_user_message(bundle, brief, mode, duration, detail, creativity, references, carries_image, small_model=False):
+def build_user_message(bundle, brief, mode, duration, detail, creativity, references, carries_image):
     lines = [f'Brief: "{str(brief).strip()}"']
     settings = [f"Creativity: {title_case(creativity)}", f"Mode: {mode}"]
     if duration:
@@ -289,7 +239,7 @@ def build_user_message(bundle, brief, mode, duration, detail, creativity, refere
         lines.append(f"Detail level {level} of {len(table)} - {entry.get('label', level)}. {scale_detail_rule(entry['rule'], duration)}")
 
     if references:
-        ref_lines, pictures = format_references(references, mode, brief, small_model)
+        ref_lines, pictures = format_references(references, mode)
         lines += ["", "References:", *ref_lines]
         labels = [tag for _ref, tag in pictures]
         if carries_image and labels:
@@ -362,6 +312,25 @@ def builder_fields(segments, mode):
         "soundscape": value("Soundscape"),
         "music": value("Music"),
     }
+
+
+def group_warnings(subject_definitions, references):
+    """Warn only when separate Subject entries explicitly cite split group members.
+
+    Free-form prose without picture citations is inconclusive; don't pretend
+    this mechanical check can judge character identity or visual similarity.
+    """
+    starts = list(re.finditer(r"(?m)^\s*(?:[-*]\s*)?<Subject\s+\d+>", str(subject_definitions or ""), re.I))
+    blocks = [subject_definitions[m.start():starts[i + 1].start() if i + 1 < len(starts) else None]
+              for i, m in enumerate(starts)]
+    warnings = []
+    for group in picture_groups(references):
+        required = set(group["pictures"])
+        cited = [{int(n) for n in re.findall(r"<Picture\s+(\d+)>", block, re.I)} & required for block in blocks]
+        if len([part for part in cited if part]) >= 2 and not any(required <= part for part in cited):
+            labels = ", ".join(str(n) for n in group["pictures"])
+            warnings.append(f"Pictures {labels} were grouped as one subject, but the draft defines them under separate Subjects. Review subject_definitions before applying.")
+    return warnings
 
 
 # ── Simple prompt mode: a port of PromptForge's server/h3-simple.mjs ──────
@@ -931,8 +900,7 @@ def _generate(body, input_directory, release_memory, stop):
         release_memory()
 
     def run(with_images):
-        user = build_user_message(bundle, brief, mode, duration, detail, creativity, references, bool(with_images),
-                                  bool(body.get("small_model")))
+        user = build_user_message(bundle, brief, mode, duration, detail, creativity, references, bool(with_images))
         return backend.chat(name, spec["system"], user, with_images, sampling, num_ctx, timeout, stop)
 
     if kind != "local":
@@ -967,6 +935,8 @@ def _generate(body, input_directory, release_memory, stop):
     fields = builder_fields(segments, mode)
     simple = simple_prompt(fields, mode, duration)
     warnings = check_prompt(fields, mode, duration, simple, bundle["max_output_chars"])
+    if mode == "REF2VA":
+        warnings += group_warnings(fields["ref"]["subject_definitions"], references)
     if not unloaded and local_gpu:
         warnings.append("This server cannot unload its model; it is still holding VRAM on this machine.")
     return {
