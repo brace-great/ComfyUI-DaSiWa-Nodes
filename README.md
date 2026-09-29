@@ -70,13 +70,14 @@ MiniMax H3 Cache ──► Patch Comfy Kitchen Attention ──► Guider / Samp
 
 ### 💎 RTX Upscaler & Refiner
 
-State-of-the-art image and video enhancement using NVIDIA RTX Video SDK. It executes up to three sequential passes (Denoise, Deblur, and Upscale) in a single node, processing frame-by-frame to keep VRAM usage predictable and low.
+NVIDIA RTX Video SDK enhancement with Denoise, Deblur and VSR/High Bitrate upscaling. Processing uses bounded frame windows and produces one standard ComfyUI `IMAGE` batch.
 
 - **Refine:** Independent Denoise and Deblur passes (both off by default).
 - **Upscale:** AI-powered VSR and High Bitrate upscaling.
 - **Smart Sizing:** Multiple resize modes including Constant Megapixel targets.
-- **Efficiency:** Frame-by-frame processing for minimal VRAM usage.
-- **Memory Control:** The output batch is allocated lazily (like the reference NVIDIA node — the kernel decides, no up-front memory pressure, no temp file). A disk-backed (mmap) fallback (`use_mmap`, off by default) is opt-in for very long video batches: when enabled it is the last tier of the VRAM -> RAM -> disk chain, taken only when available RAM is still short after automatic model unloading (`auto_unload_models`, on by default). **Warning:** enabling `use_mmap` writes a multi-giB `.mmap` temp file to your temp drive for the whole run.
+- **Efficiency:** Internal `chunking` (on, 16 frames by default) bounds processing intermediates; the final output remains a single `IMAGE` batch.
+- **Lossless output storage:** `lossless_fp16` (on by default) uses FP16 only if every output value round-trips exactly and memory headroom permits; typical VSR output remains FP32.
+- **Memory Control:** Full input and output batches still scale with video duration and may be cached by ComfyUI; internal chunking is not constant-memory streaming. The output is allocated lazily in VRAM or RAM. Optional `use_mmap` enables a disk-backed last resort (off by default); `auto_unload_models` is on by default.
 
 ![RTX_UpscalerRefiner.png](assets/RTX_UpscalerRefiner.png)
 
